@@ -7,7 +7,3 @@
 # (RGYNnediParam::WEIGHTS_FILE_SIZE), so they must never be line-ending
 # translated.
 *.bin binary
-
-# Visual Studio project files - CRLF is what the IDE writes.
-*.vcxproj text eol=crlf
-*.props   text eol=crlf
