@@ -22,6 +22,9 @@ RTGMC deinterlacing (50i/60i -> 50p/60p) as a standalone shared library.
 
 - `RtgmcDif` 输入第 4 帧 50i 时，才输出第 1 帧 50p。
 - 1080p 422p、`slow_both` 预设显存占用约 2G。
+- Windows 侧 MSVC 2019 + CUDA 11.5 + P2000，编译测试通过。
+- Windows 侧 MSVC 2019 + CUDA 11.5 + RTX 3080，编译测试通过。
+- Ubuntu 22.04 + g++-10 + CUDA 11.5.119 + RTX 5000 Ada，编译测试通过。
 
 ## 文档
 
@@ -35,12 +38,20 @@ RTGMC deinterlacing (50i/60i -> 50p/60p) as a standalone shared library.
 
 ## 性能测试
 
-![Rtgmc 性能对比](/sampleimage/1/outsrc_cg_50.jpg)
-
 | 滤镜 | 预设 | 硬件 | 速度（50i 输入，fps） |
 |---|---|---:|---:|
-| QTGMC | Slow | i9-7920X@2.90GHz | 3 |
-| RtgmcDif | Slow | RTX3080 | 60 |
-| RtgmcDif | Slow | Ada5000 | 125 |
-| RtgmcDif | Slow_both | RTX3080 | 40 |
-| RtgmcDif | Slow_both | Ada5000 | 72 |
+| QTGMC | Slow | i9-7920X@2.90GHz | 3 fps/s |
+| RtgmcDif | Slow | RTX3080 | 60 fps/s |
+| RtgmcDif | Slow | Ada5000 | 125 fps/s |
+| RtgmcDif | Slow_both | RTX3080 | 40 fps/s |
+| RtgmcDif | Slow_both | Ada5000 | 72 fps/2 |
+
+## 效果对比,上yadif,下Rtgmcdif
+yadif
+![yadif](/sampleimage/yadif.gif)
+Rtgmcdif
+![rtgmc](/sampleimage/rtgmc.gif)
+yadif
+![rtgmc](/sampleimage/2/yadif600.jpg)
+Rtgmcdif
+![rtgmc](/sampleimage/2/rtgmc600.jpg)
