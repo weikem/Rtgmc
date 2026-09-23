@@ -1,0 +1,32 @@
+# CMake build trees (the module lands in Output/)
+build/
+build-cmake/
+build-*/
+Output/
+
+# Build logs and CMake probe leftovers
+*.log
+probe.obj
+
+# Compiler and linker intermediates (the old .vcxproj build left these in-tree)
+*.obj
+*.pdb
+*.tlog
+*.deps
+*.cache
+*.ilk
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Editors
+.vscode/
+.idea/
+*.swp

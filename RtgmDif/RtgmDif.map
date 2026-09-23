@@ -1,0 +1,19 @@
+/*
+ * The Linux equivalent of RtgmDif.def: the exported symbol list of libRtgmDif.so.
+ *
+ * Like the .def, this is the whole of it - rtgmdif_create and rtgmdif_destroy, the two
+ * extern "C" entry points. Everything else the module defines becomes local to the .so,
+ * which also keeps ~2000 NVEncCore symbols out of the dynamic symbol table. The rest of
+ * the surface is the pure RtgmDif interface the factory returns, which needs no exported
+ * symbol at all.
+ *
+ * Anonymous version node: the two names stay unversioned, so dlopen()/dlsym() consumers
+ * (and the CMake link to the .so) see them exactly as the .def spells them on Windows.
+ */
+{
+global:
+    rtgmdif_create;
+    rtgmdif_destroy;
+local:
+    *;
+};

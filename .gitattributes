@@ -1,0 +1,13 @@
+# Keep line endings consistent across the two platforms this builds on.
+# Without this, git's autocrlf would rewrite every text file on checkout and a
+# Windows-side edit followed by a Linux-side build shows up as a whole-file diff.
+* text=auto
+
+# The EDI weights are a binary blob whose exact size the loader checks
+# (RGYNnediParam::WEIGHTS_FILE_SIZE), so they must never be line-ending
+# translated.
+*.bin binary
+
+# Visual Studio project files - CRLF is what the IDE writes.
+*.vcxproj text eol=crlf
+*.props   text eol=crlf

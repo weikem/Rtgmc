@@ -1,0 +1,175 @@
+Rtgmc - the RTGMC deinterlacer as a standalone library
+Copyright (C) 2026 weikem
+
+Released under the MIT License - see LICENSE. In short: you may use, copy,
+modify, merge, publish, distribute, sublicense and sell copies of this software,
+provided this copyright notice and permission notice are kept. The software
+comes with no warranty of any kind.
+
+===============================================================================
+1. Upstream: this project is a derivative of rigaya's NVEnc
+===============================================================================
+
+Everything under RtgmDif/NVEnc/ originates from NVEnc, the NVIDIA encoder front
+end by rigaya:
+
+    https://github.com/rigaya/NVEnc
+
+That project is distributed under the MIT License, and its copyright notice and
+permission text are kept verbatim at the top of every file taken from it, in the
+form:
+
+    // QSVEnc/NVEnc by rigaya
+    // The MIT License
+    // Copyright (c) 2011-2016 rigaya
+
+No upstream copyright notice has been removed or altered, and this project is
+released under the same MIT License as upstream. That is a choice rather than a
+constraint - MIT would also have permitted a copyleft release of the whole work,
+but matching upstream keeps the terms uniform across the tree and is the
+simplest thing to explain to anyone reusing it.
+
+For the files listed in section 3 the upstream MIT notice is not the whole
+story, because they were modified.
+
+The RTGMC deinterlacing filter at the centre of this project - the
+NVEncFilterRtgmc*.cu/.h family and the NVEncFilterRtgmcShimmerRepair* files - is
+rigaya's work as well. This project contributes the packaging: a standalone
+module with a C API, a device-in/device-out interface, the CMake build for both
+platforms, and the test driver. See RtgmDif.h for what the module adds on top of
+the filter itself.
+
+If you use this project, please also consider the upstream project it is built
+on; the filter's design, its presets and its parameter semantics are all
+documented there.
+
+===============================================================================
+2. Components that this project's licence does not cover
+===============================================================================
+
+The files below belong to others and remain under their own terms. They are
+carried because the build needs them. The MIT grant in LICENSE applies to this
+project's own code, not to them.
+
+(a) MIT-licensed NVIDIA headers - redistributable, notice retained:
+
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/nvEncodeAPI.h
+        Copyright (c) 2010-2026 NVIDIA Corporation
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/dynlink_cuviddec.h
+        Copyright (c) 2010-2017 NVIDIA Corporation
+
+    Both carry the full MIT permission text and state that the notice applies to
+    that header file only - the same terms as this project, under a different
+    copyright holder.
+
+(b) NVIDIA headers carrying the CUDA Toolkit / Video Codec SDK sample terms.
+    Their headers read "refer to the NVIDIA end user license agreement (EULA)
+    associated with this source code [...] Any use, reproduction, disclosure, or
+    distribution of this software and related documentation outside the terms of
+    the EULA is strictly prohibited":
+
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/dynlink_cuda.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/dynlink_cuda_cuda.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/helper_cuda.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/helper_nvenc.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/helper_string.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/drvapi_error_string.h
+    RtgmDif/NVEnc/NVEncSDK/Common/inc/nvCVStatus.h
+
+    These are build-time only: declarations and a few inline helpers. Nothing
+    from them is linked into the resulting library, so a binary release (the
+    .so/.dll plus the weights) does not carry them. If you would rather not
+    carry them in source either, take the same headers from a local CUDA Toolkit
+    or Video Codec SDK installation and drop the copies here - the include paths
+    in RtgmDif/CMakeLists.txt are the only thing pointing at them.
+
+    NVIDIA's SDK terms are not this project's to grant, and they are stricter
+    about redistribution than the MIT License around them. Upstream NVEnc
+    carries the same files under the same MIT licence, so this project is no
+    different from it in that respect.
+
+(c) nnedi3 weights:
+
+    RtgmDif/NVEnc/resource/nnedi3_weights.bin
+
+    The neural network weights used by the NNEDI3 deinterlacing filter. They
+    come from Tritical's nnedi3, an AviSynth plugin distributed under the GPL -
+    which would make this the one non-MIT component in the tree. It is a data
+    file loaded at run time, not code: it is required for the EDI stage of every
+    RTGMC preset, and it is not linked into the library.
+
+    This notice states where the file comes from and what the project it comes
+    from is licensed under; it does not claim to settle the question for you. If
+    your own redistribution depends on the answer, check nnedi3's current
+    distribution for its terms.
+
+===============================================================================
+3. Modifications relative to upstream NVEnc
+===============================================================================
+
+The MIT License only requires the copyright notice and permission text to be
+kept, not a list of changes - but a reader should be able to tell at a glance
+what is upstream and what is not, so the modifications are listed here. All of
+them were made in September 2026, while turning the filter into a standalone
+module; every other file under RtgmDif/NVEnc/ is upstream code unchanged.
+
+Modified:
+
+    NVEnc/NVEncCore/NVEncFilter.h
+        Removed the NPPI_DLL_NAME_TSTR / NVRTC_DLL_NAME_TSTR declarations and
+        check_if_nppi_dll_available(), none of which had a caller here.
+
+    NVEnc/NVEncCore/NVEncFilter.cpp
+        Removed the body of check_if_nppi_dll_available() for the same reason.
+
+    NVEnc/NVEncCore/NVEncFilterParam.cpp
+        Replaced five calls to cmd_string_to_bool() with an inline yes/no parse,
+        so that this translation unit no longer needs the command line parser.
+
+    NVEnc/NVEncCore/NVEncFilterNnedi.cu
+        Made the default weights lookup (nnediDefaultWeightFilePath) and its file
+        name platform-independent. Upstream only had them for Windows, so on
+        Linux an empty weight path went down the "embedded resource" route and
+        failed with RGY_ERR_INVALID_PARAM.
+
+    NVEnc/NVEncCore/rgy_memmem.cpp, NVEnc/NVEncCore/rgy_bitstream.cpp
+        Their CPU-feature dispatch now returns the scalar implementation
+        directly; see the deleted files below.
+
+Deleted:
+
+    NVEnc/NVEncCore/rgy_memmem_avx2.cpp
+    NVEnc/NVEncCore/rgy_memmem_avx512bw.cpp
+    NVEnc/NVEncCore/rgy_bitstream_avx2.cpp
+    NVEnc/NVEncCore/rgy_bitstream_avx512bw.cpp
+
+    AVX2/AVX512BW implementations of bitstream parsing and memory searching.
+    They exist to accelerate the NVEncC front end's file reading, which this
+    module does not do - it receives device frames and returns device frames -
+    and their entry points had no caller here. Deleting them is what removed the
+    last /arch:AVX2 and /arch:AVX512 from the build.
+
+    NVEnc/NVEncSDK/Common/inc/helper_cuda_drvapi.h
+    NVEnc/NVEncSDK/Common/inc/helper_functions.h
+
+    Two NVIDIA headers that nothing in this tree includes. Dropped so that the
+    list in section 2(b) is only what the build actually needs.
+
+Added (not upstream code, original to this project):
+
+    NVEnc/NVEncCore/rgy_config.h
+        The Linux-side platform configuration that rgy_version.h expects to
+        include on non-Windows builds. Upstream carries it; the vendored subset
+        did not.
+
+    NVEnc/rtgmc_cmd_stub.cpp, NVEnc/rtgmc_linux_stubs.cpp
+        Stand-ins for upstream translation units that this module does not
+        vendor, so the link closes without their baggage.
+
+    NVEnc/rtgmc_config.h
+        Force-included on every translation unit to turn off the optional
+        features (NVVFX, NGX, NVRTC, NVML, ONNX, libplacebo, ffmpeg ...) that a
+        pure deinterlacing module does not need.
+
+Everything outside RtgmDif/NVEnc/ - the CMake build, RtgmDif.h/.cpp, the C API,
+RtgmDifTest - is original to this project.

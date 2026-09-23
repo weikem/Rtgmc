@@ -1,0 +1,19 @@
+; ---------------------------------------------------------------------------------------------
+; The export list of RtgmDif.dll, and the whole of it.
+;
+; Nothing in the source is marked __declspec(dllexport): this file is what makes the two names
+; below visible, and the linker fails the build if either does not exist. Both are extern "C",
+; so the names here are the plain undecorated ones - no mangled class signature to maintain.
+;
+; One entry is the factory and the other is the deleter; every other call a consumer makes goes
+; through the interface pointer the factory returns, which needs no exported symbol at all.
+;
+;     dumpbin /exports RtgmDif.dll
+;
+; ---------------------------------------------------------------------------------------------
+
+LIBRARY     RtgmDif
+
+EXPORTS
+    rtgmdif_create
+    rtgmdif_destroy

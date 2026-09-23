@@ -1,0 +1,30 @@
+﻿#include "NVEncFilterDegrain.cuh"
+
+RGY_ERR launchNVEncDegrainMotionSearchSearchParallelU8Blk32(
+    const uint8_t *sourcePlane, const uint8_t *referencePlane,
+    const uint8_t *subpelPlanes, const int subpelPlaneStride, CUMemBuf &vectors,
+    const int pitch, const int width, const int height, const int planeBase, const int blockCount,
+    const RGYDegrainBlockLayout &layout, const int pel, const int subpelInterp,
+    const int pad, const int motionCostScale, const int lowSadWeightScale,
+    const int zeroCandidateCostScale, const int frameAverageCandidateCostScale,
+    const int newCandidateCostScale, const int searchParam,
+    const int level, cudaStream_t stream) {
+    return launchNVEncDegrainMotionSearchSearchParallelBlock<uint8_t, 32>(
+        sourcePlane, referencePlane, subpelPlanes, subpelPlaneStride, vectors, pitch, width, height, planeBase, blockCount, layout,
+        pel, subpelInterp, pad, motionCostScale, lowSadWeightScale, zeroCandidateCostScale,
+        frameAverageCandidateCostScale, newCandidateCostScale, searchParam, level, stream);
+}
+
+RGY_ERR launchNVEncDegrainMotionSearchSpatialRefineU8Blk32(
+    const uint8_t *sourcePlane, const uint8_t *referencePlane,
+    const uint8_t *subpelPlanes, const int subpelPlaneStride,
+    CUMemBuf &vectors, const CUMemBuf &vectorsPrev, CUMemBuf &vectorsFinal,
+    const int pitch, const int width, const int height, const int planeBase, const int finalBase,
+    const int blockCount, const RGYDegrainBlockLayout &layout,
+    const int pel, const int subpelInterp, const int pad, const int motionCostScale,
+    const int lowSadWeightScale, const int newCandidateCostScale, const int spatialEarlySadThreshold, cudaStream_t stream) {
+    return launchNVEncDegrainMotionSearchSpatialRefineBlock<uint8_t, 32>(
+        sourcePlane, referencePlane, subpelPlanes, subpelPlaneStride, vectors, vectorsPrev, vectorsFinal, pitch, width, height,
+        planeBase, finalBase, blockCount, layout, pel, subpelInterp, pad, motionCostScale,
+        lowSadWeightScale, newCandidateCostScale, spatialEarlySadThreshold, stream);
+}
