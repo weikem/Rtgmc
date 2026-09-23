@@ -1,6 +1,5 @@
 # ---------------------------------------------------------------------------------------
-# RtgmDifTest - raw YUV driver for the RtgmDif module (mirrors RtgmDifTest.vcxproj).
-#
+# RtgmDifTest - raw YUV driver for the RtgmDif module.
 # Cross-platform: Windows/MSVC and Linux/gcc.
 #
 # Build (Windows, x64, from this directory), after RtgmDif has been built once:
@@ -11,17 +10,15 @@
 #     cmake -S . -B build-cmake -DCMAKE_BUILD_TYPE=Release
 #     cmake --build build-cmake -j
 #
-# Like the .vcxproj, this project builds no NVEncCore source of its own: it links the
-# import library of the module next door (RtgmDif.lib on Windows, libRtgmDif.so on Linux)
-# and reaches outside its own directory for nothing but that project (the module and
-# nnedi3_weights.bin are copied next to the executable by the post-build step, because
-# the module loads the weights from its own directory).
+# This project builds no NVEncCore source of its own: it links the module next door and
+# reaches outside its own directory for nothing but that project. The module and
+# nnedi3_weights.bin are copied next to the executable, because the module loads the
+# weights from its own directory.
 #
-# RtgmDifTest\CMakeLists.txt assumes the sibling layout:
-#     <parent>\RtgmDif\Output\<RtgmDif.lib | libRtgmDif.so>
-#     <parent>\RtgmDif\Output\<RtgmDif.dll | libRtgmDif.so>
-# Override with -DRTGMDIF_MODULE_DIR=<path to RtgmDif> if the two directories are not
-# siblings (the .vcxproj has the same assumption baked into its link path).
+# The sibling layout is assumed:
+#     <parent>/RtgmDif/Output/<RtgmDif.lib | libRtgmDif.so>
+#     <parent>/RtgmDif/Output/<RtgmDif.dll | libRtgmDif.so>
+# Override with -DRTGMDIF_MODULE_DIR=<path to RtgmDif> if the two are not siblings.
 # ---------------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.18)
 
@@ -30,8 +27,7 @@ project(RtgmDifTest LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# RtgmDifTest.vcxproj leaves RuntimeLibrary at its default for the project, which is
-# MultiThreaded here as well - the same static CRT the module and the reference driver use.
+# The same static CRT the module uses.
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
 endif()
@@ -65,8 +61,8 @@ endif()
 
 add_executable(RtgmDifTest RtgmDifTest.cpp)
 
-# RtgmDifTest.vcxproj OutDir $(ProjectDir)build\: the executable lands next to the module
-# copy, which is where the module is loaded from at runtime.
+# The executable lands next to the module copy, which is where the module is loaded from
+# at runtime.
 set_target_properties(RtgmDifTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../Output"
 )
@@ -76,9 +72,7 @@ if(MSVC)
     )
 endif()
 
-# RtgmDifTest.vcxproj PreprocessorDefinitions (the _CONSOLE/WIN32 set is Windows-only;
-# NDEBUG comes from the build configuration on both platforms - Release/RelWithDebInfo
-# is -DNDEBUG, which is what the vcxproj hard-codes).
+# NDEBUG comes from the build configuration on both platforms (Release/RelWithDebInfo).
 if(WIN32)
     target_compile_definitions(RtgmDifTest PRIVATE
         _CRT_SECURE_NO_WARNINGS
@@ -87,17 +81,14 @@ if(WIN32)
     )
 endif()
 
-# RtgmDifTest.vcxproj AdditionalIncludeDirectories: the module's public headers, i.e.
-# RtgmDif.h next door.
+# The module's public headers, i.e. RtgmDif.h next door.
 target_include_directories(RtgmDifTest PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${RTGMDIF_MODULE_DIR}"
 )
 
-# RtgmDifTest.vcxproj AdditionalDependencies: RtgmDif.lib (from ..\RtgmDif\build) and
-# cudart, both static - the module links its CUDA runtime statically, so the driver does
-# the same to keep one runtime in the process. On Linux the same is true for
-# libcudart_static.a.
+# The module links its CUDA runtime statically, so the driver does the same to keep one
+# runtime in the process.
 find_package(CUDAToolkit REQUIRED)
 target_link_libraries(RtgmDifTest PRIVATE
     $<IF:$<TARGET_EXISTS:RtgmDif>,RtgmDif,"${RTGMDIF_MODULE_DIR}/../Output/${CMAKE_CFG_INTDIR}/${RTGMDIF_IMPLIB_FILE}">
@@ -109,9 +100,9 @@ if(TARGET RtgmDif)
     add_dependencies(RtgmDifTest RtgmDif)
 endif()
 
-# RtgmDifTest.vcxproj post-build step: the module and the EDI weights next to the exe.
-# Prefer the RtgmDif target when present (CMake picks up its real RUNTIME_OUTPUT_DIRECTORY
-# through $<TARGET_FILE:...>); otherwise fall back to the sibling Output/<CONFIG>/ tree.
+# The module and the EDI weights next to the exe. Prefer the RtgmDif target when present
+# (CMake picks up its real RUNTIME_OUTPUT_DIRECTORY through $<TARGET_FILE:...>); otherwise
+# fall back to the sibling Output/<CONFIG>/ tree.
 add_custom_command(TARGET RtgmDifTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<IF:$<TARGET_EXISTS:RtgmDif>,$<TARGET_FILE:RtgmDif>,${RTGMDIF_MODULE_DIR}/../Output/${CMAKE_CFG_INTDIR}/${RTGMDIF_MODULE_FILE}>"

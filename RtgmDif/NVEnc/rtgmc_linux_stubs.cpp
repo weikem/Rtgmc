@@ -17,9 +17,9 @@
 //   rgy_ini.cpp        GetPrivateProfileIntCP()/GetPrivateProfileStringCP() are the Linux
 //                      spellings of the Win32 profile API, which the Windows build gets as
 //                      macros straight from the OS (see rgy_ini.h). Their only caller is the
-//                      AFS option loader in rgy_prm.cpp, i.e. the NVEncC front end this module
-//                      does not have - RTGMC takes its parameters through RtgmDifConfig, never
-//                      through an .ini file. Returning the caller's defaults is exactly what
+//                      AFS option loader in rgy_prm.cpp, i.e. the command line front end this
+//                      module does not have - RTGMC takes its parameters through RtgmDifConfig,
+//                      never through an .ini file. Returning the caller's defaults is exactly what
 //                      the Win32 API does when the file or the key is absent, so the semantics
 //                      stay the same rather than silently inventing values.
 //

@@ -257,11 +257,11 @@ void NVEncFilterDisabled::close() {
 NVEncFilterParamCrop::NVEncFilterParamCrop() : NVEncFilterParam(), crop(initCrop()), matrix(RGY_MATRIX_ST170_M), colorrange(RGY_COLORRANGE_LIMITED) {};
 NVEncFilterParamCrop::~NVEncFilterParamCrop() {};
 
-// check_if_nppi_dll_available() used to sit here. It only ever served NVEncC's resize path,
-// it had no call site anywhere in the vendored tree, and the DLL name string it read was the
-// sole reason this module carried anything npp-related. Removed together with its declaration
-// in NVEncFilter.h, so npp no longer appears in the build at all; re-add both if the resize
-// filter is ever vendored in.
+// check_if_nppi_dll_available() used to sit here. It only ever served the front end's resize
+// path, it had no call site anywhere in the vendored tree, and the DLL name string it read was
+// the sole reason this module carried anything npp-related. Removed together with its
+// declaration in NVEncFilter.h, so npp no longer appears in the build at all; re-add both if
+// the resize filter is ever vendored in.
 #if ENABLE_NVRTC
 bool check_if_nvrtc_dll_available() {
     HMODULE hModule = RGY_LOAD_LIBRARY(NVRTC_DLL_NAME_TSTR);

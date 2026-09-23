@@ -46,9 +46,8 @@
 // every intermediate frame buffer and every CUDA stream belongs to this module.
 //
 // Buffer layout: tightly packed planar, exactly the raw YUV layout of the file - plane Y,
-// then U, then V, one row after another, no padding. That is also what the input reader of
-// the reference program (RtgmcDemo, and NVEncC's raw reader) produces, so a frame can be
-// handed over without any repacking.
+// then U, then V, one row after another, no padding. That is also what a raw YUV reader
+// produces, so a frame can be handed over without any repacking.
 //
 // Stream ordering: everything this module enqueues - the input copy, every kernel of the
 // chain and the output copies - goes on the stream passed to init(). That makes the module a
@@ -65,12 +64,13 @@
 // How the module is exported, and why there is no macro here.
 //
 // There is no __declspec(dllexport) either, not even on the definitions: the two exported names
-// are listed in RtgmDif.def and the linker resolves them there. A .def cannot disagree with the
-// declaration in the way an attribute can (that mismatch is exactly what C2375 is), and it says
-// in one readable place what the DLL offers.
+// are listed in RtgmDif.def (Windows) or the RtgmDif.map version script (Linux) and the linker
+// resolves them there. A .def cannot disagree with the declaration in the way an attribute can
+// (that mismatch is exactly what C2375 is), and it says in one readable place what the module
+// offers.
 //
 // The whole exported surface is two plain C functions, declared at the bottom of this file and
-// named in the project's module definition file, RtgmDif.def, which is the export list:
+// named in that export list:
 //
 //     RtgmDif *rtgmdif_create();          // or nullptr if the module could not start
 //     void     rtgmdif_destroy(RtgmDif *);
@@ -88,7 +88,8 @@
 // through an interface. It also keeps three things on the module's side of the wall - the C++
 // name mangling, the class layout, and the allocator that has to free what it allocated.
 //
-// `dumpbin /exports RtgmDif.dll` prints exactly two names, both undecorated.
+// `dumpbin /exports RtgmDif.dll` (Windows) or `nm -D --defined-only libRtgmDif.so` (Linux)
+// prints exactly two names, both undecorated.
 //
 // ------------------------------------------------------------------------------------------
 
@@ -96,17 +97,17 @@
 
 #include <cuda_runtime.h>
 
-// The flows, matching the RtgmcDemo command lines one to one:
+// The flows:
 //
-//   fast_deint : --preset fast --mode deint
+//   fast_deint : preset fast, deinterlace only
 //                one pass, 50i -> 50p. The plain deinterlace.
 //
-//   fast_both  : --preset fast --mode both
+//   fast_both  : preset fast, deinterlace + clean pass
 //                the same pass 1, then the single-rate clean pass with the preset's own
 //                values (QTGMC's second pass: TR1 delta 1, TR2 off for this preset since
 //                `fast` maps to TR2=0, Rep2 thin 4, Sharpness=0).
 //
-//   fast_opt   : --preset fast --mode both --clean-tr1 2 --clean-tr2 1 --nnsize 3
+//   fast_opt   : preset fast, clean TR1 2 / TR2 1, nnsize 3
 //                pass 1 with the stronger nnedi3 window, and the clean pass brought up to
 //                QTGMC's Slower TR structure (TR1 delta 2 then TR2 delta 1). Measured on
 //                1080i: the residual field-parity alternation in static areas drops to about
@@ -114,34 +115,34 @@
 //                of the `fast` cost, and the extra EDI quality raises the vertical detail
 //                measure from 1.1383 to 1.1439 - slightly above `slower`.
 //
-//   faster_nn1 : --preset faster --mode deint --nnsize 1
+//   faster_nn1 : preset faster, deinterlace only, nnsize 1
 //                the cheapest flow, and the one that came out of the scrolling-text case. On
 //                interlaced text the `fast` family left visible residue and trails, which
-//                turned out to be the nnedi3 window rather than the port: the official NVEncC
-//                and RtgmcDemo agree byte for byte with RtgmDif there, at every preset tested.
+//                turned out to be the nnedi3 window rather than the port: the upstream
+//                implementation agrees byte for byte with RtgmDif there, at every preset tested.
 //                `faster` alone is weaker than `fast` (TR0 1 instead of 2, Rep0 thin 0 instead
 //                of 3), but with nnsize 1 its EDI is the strong one, and on that content it
 //                was the only fast-side combination that looked right. One pass, so it is
 //                also cheaper and lighter than fast_both / fast_opt.
 //
-//   slow       : --preset slow --mode deint
+//   slow       : preset slow, deinterlace only
 //                QTGMC's Slow preset, one pass. Same parameter set as `slower` except for the
 //                two entries whose threshold is Slower in apply_vpp_rtgmc_preset(): Sbb is 0
 //                here against 1 there, and chroma motion search is off here against on there.
 //                QTGMC's Slow has Sbb = 0, so this is the one that lines up with
 //                QTGMC(preset="Slow") - `slower` lines up with QTGMC(preset="Slower").
 //
-//   slower     : --preset slower --mode deint
+//   slower     : preset slower, deinterlace only
 //                QTGMC's Slower preset, one pass: TR0/TR1/TR2 = 2/2/1, Rep0/Rep2 = 4/4, NNEDI3
 //                nnsize 1 with nneurons 1, SMode/SLMode/SLRad = 2/2/1, Sbb 1, chroma motion
 //                search on. Also accepted on the text case; roughly 1.4x the cost of `fast`
-//                in NVEncC's own timing.
+//                in the upstream timing.
 //
-//   slow_both  : --preset slow --mode both
+//   slow_both  : preset slow, deinterlace + clean pass
 //                `slow` plus the single-rate clean pass, i.e. QTGMC's two stages:
 //                QTGMC(50i, preset="Slow") then QTGMC(50p, InputType=1, Sharpness=0). The clean
 //                pass inherits the preset's TR1/TR2 deltas and rep2 thinning and only forces
-//                SMode to 0, which is what the reference program does as well. This is the one
+//                SMode to 0, which is what the two-stage setup does as well. This is the one
 //                to reach for when the single-rate result still shows a little of the residual
 //                field-parity alternation - it is what the second stage exists for. Costs the
 //                clean chain's buffers (about 1.2 GiB at 1080p in 444p) on top of `slow`.
@@ -161,9 +162,7 @@ enum RtgmDifFlow {
 // Colours the module accepts. The filter runs on the input csp as it is (no conversion), and
 // the output has the same csp and bit depth as the input.
 //
-// yuv422p is supported by the filter but not recommended: NVEncC never feeds 422 to RTGMC
-// (its raw reader turns 422p into NV16 and NVEncCore normalises NV16 to YUV444 before the
-// deinterlacer), and feeding RTGMC 422 directly makes static areas shimmer.
+// yuv422p is the format this is normally run on.
 enum RtgmDifCsp {
     RTGMDIF_CSP_YUV420P = 0,
     RTGMDIF_CSP_YUV422P = 1,
@@ -543,9 +542,10 @@ protected:
     RtgmDif() = default;
 };
 
-// The module's entire exported surface. Declared without any decoration: the definitions in
-// RtgmDif.cpp carry the dllexport, so a consumer needs nothing - not even dllimport, which for
-// two calls would buy nothing but a way to get it wrong.
+// The module's entire exported surface. Declared without any decoration: the names are exported
+// by name through RtgmDif.def on Windows and the RtgmDif.map version script on Linux, so a
+// consumer needs nothing - not even dllimport, which for two calls would buy nothing but a way
+// to get it wrong.
 extern "C" {
     RtgmDif *rtgmdif_create();
     void rtgmdif_destroy(RtgmDif *dif);

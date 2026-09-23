@@ -1,15 +1,16 @@
 # ---------------------------------------------------------------------------------------
 # Rtgmc - the two RtgmDif projects, moved out of the NVEnc tree and built together.
 #
-#   RtgmDif      the RTGMC deinterlacer as a DLL, with the NVEnc sources it needs vendored
-#                inside it (RtgmDif\NVEnc\...) - nothing outside this directory is read.
-#   RtgmDifTest  the raw YUV driver that loads that DLL.
+#   RtgmDif      the RTGMC deinterlacer as a shared library, with the NVEnc sources it
+#                needs vendored inside it (RtgmDif/NVEnc/...) - nothing outside this
+#                directory is read.
+#   RtgmDifTest  the raw YUV driver that loads that library.
 #
 # Build (Windows, x64, from this directory):
 #     cmake -S . -B build-cmake -A x64
 #     cmake --build build-cmake --config Release
 #
-# Build (Linux; CUDA 11.5 toolkit + gcc 11):
+# Build (Linux; CUDA 11.5 toolkit + gcc 10):
 #     cmake -S . -B build-cmake -DCMAKE_BUILD_TYPE=Release
 #     cmake --build build-cmake -j
 #
@@ -21,7 +22,7 @@
 # RtgmDifTest.exe / RtgmDifTest next to them, so the driver finds the module and
 # nnedi3_weights.bin beside itself.
 #
-# Requires: CUDA toolkit 11.x, and a C++17 compiler (MSVC 2019+ or gcc 11).
+# Requires: CUDA toolkit 11.x, and a C++17 compiler (MSVC 2019+ or gcc 10).
 # No NVEnc checkout is needed.
 # ---------------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.18)

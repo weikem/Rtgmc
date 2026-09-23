@@ -28,8 +28,8 @@
 //
 // RtgmDif implementation. See RtgmDif.h for the interface.
 //
-// The chain itself is the same code RtgmcDemo drives, kept in the same shape on purpose so
-// that the two can be compared frame by frame:
+// The chain itself is the same code the integrated filter drives, kept in the same shape on
+// purpose so that the two can be compared frame by frame:
 //
 //   stage 0 : NVEncFilterRtgmc, the integrated filter. It builds its own 17 stage pipeline
 //             (bob -> search prefilter -> analyze -> EDI -> TR1 -> rep1 -> retouch -> TR2 ->
@@ -168,8 +168,8 @@ static VppDegrain make_degrain_stage(const VppDegrain &base, const VppDegrainMod
 //     analyze -> TR1 -> rep1 -> retouch -> TR2 -> rep2
 //
 // The order is QTGMC's, and is the same one the integrated filter uses internally
-// (NVEncFilterRtgmc.cu, enum RtgmcFilterIndex) and the same one NVEncC builds for the
-// component pipeline (NVEncCore.cpp, InitFiltersCreateVppList).
+// (NVEncFilterRtgmc.cu, enum RtgmcFilterIndex) and the same one the upstream component
+// pipeline builds (NVEncCore.cpp, InitFiltersCreateVppList).
 //
 // A stage whose parameter is switched off (tr2.delta == 0, repair-thin == 0) degrades to a
 // plain pass-through, so the shape of the chain never changes.
@@ -1020,7 +1020,7 @@ static void build_flow_params(const RtgmDifConfig &cfg, VppRtgmc *deint, VppRtgm
 
     // The EDI window, which is the parameter that decided the scrolling-text case: smaller is
     // stronger. It has to go on the *deinterlace* side, before the clean parameters are copied
-    // from it, because that is what the reference program does - its --nnsize override goes
+    // from it, because that is what the upstream override does - its nnsize override goes
     // through the shared quality override set, so pass 1 picks it up as well and the
     // deinterlaced frames themselves come out sharper. That gain is the measured
     // `detail` 1.1383 -> 1.1439, and the clean stage inherits it through the copy below.
@@ -1796,8 +1796,9 @@ bool RtgmDifImpl::init(cudaStream_t stream) {
         prm->frameOut = prm->frameIn;
         // Stage 0 of the RTGMC chain is RtgmcBob, which doubles baseFps (25 -> 50).
         prm->baseFps  = rgy_rational<int>(cfg.fpsNum, cfg.fpsDen);
-        // Output timebase: one unit == one 50p frame. NVEncC passes its output timebase here
-        // for exactly the same reason (NVEncCore.cpp, createFilter for VppType::CL_RTGMC).
+        // Output timebase: one unit == one 50p frame. The upstream pipeline passes its output
+        // timebase here for exactly the same reason (NVEncCore.cpp, createFilter for
+        // VppType::CL_RTGMC).
         prm->timebase = rgy_rational<int>(cfg.fpsDen, cfg.fpsNum * 2);
         prm->bOutOverwrite = false;
         prm->sharedAnalysisMode = false;  // standalone use: the filter runs its own analysis
